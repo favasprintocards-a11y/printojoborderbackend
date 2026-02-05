@@ -1,0 +1,155 @@
+/* CRM Layout */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-main);
+}
+
+.sidebar {
+  width: 260px;
+  background-color: var(--primary);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  left: 0;
+  top: 0;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 260px;
+  padding: 30px;
+  width: calc(100% - 260px);
+  transition: all 0.3s ease;
+}
+
+/* Mobile Toggle Button */
+.mobile-toggle {
+  display: none;
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 1100;
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 992px) {
+  .sidebar {
+    left: -260px;
+    transition: all 0.3s ease;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 20px 15px;
+    padding-top: 70px;
+    /* Space for mobile toggle */
+  }
+
+  .mobile-toggle {
+    display: flex;
+  }
+
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+
+  .sidebar-overlay.show {
+    display: block;
+  }
+}
+
+/* Sidebar Styles */
+.sidebar-brand {
+  padding: 24px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-nav {
+  padding: 20px 0;
+  flex: 1;
+}
+
+.nav-section {
+  margin-bottom: 24px;
+}
+
+.nav-label {
+  display: block;
+  padding: 0 24px 8px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 600;
+}
+
+.sidebar .nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.sidebar .nav-item:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar .nav-item.active {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  border-left-color: var(--accent);
+}
+
+.sidebar-footer {
+  padding: 20px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@media print {
+  .sidebar {
+    display: none;
+  }
+
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 0;
+  }
+}
