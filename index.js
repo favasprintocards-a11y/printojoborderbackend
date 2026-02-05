@@ -26,6 +26,15 @@ const upload = multer({ storage: storage });
 
 // Routes
 
+// Health check / root route
+app.get("/", (req, res) => {
+    res.json({
+        message: "Printo Job Order API is running",
+        version: "1.0.0",
+        endpoints: ["/api/clients", "/api/jobs", "/api/products", "/api/settings", "/api/staff"]
+    });
+});
+
 // --- Clients API ---
 
 // Get all clients
