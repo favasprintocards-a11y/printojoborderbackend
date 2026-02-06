@@ -214,7 +214,7 @@ app.post("/api/jobs", upload.any(), async (req, res) => {
         newJob.job_id_display = `PC-${shortId}`;
         await newJob.save();
 
-        res.json({ message: "success", id: newJob._id, job_id_display: newJob.job_id_display });
+        res.json({ message: "success", id: newJob._id.toString(), data: { ...newJob._doc, id: newJob._id }, job_id_display: newJob.job_id_display });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -251,7 +251,7 @@ app.put("/api/jobs/:id", upload.any(), async (req, res) => {
             }))
         }, { new: true });
 
-        res.json({ message: "success", data: updatedJob });
+        res.json({ message: "success", data: { ...updatedJob._doc, id: updatedJob._id } });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
