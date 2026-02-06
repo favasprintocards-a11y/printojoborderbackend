@@ -2,10 +2,20 @@ const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
-const db = require("./database.js");
+const connectDB = require("./mongodb.js");
+const Client = require("./models/Client");
+const Job = require("./models/Job");
+const Product = require("./models/Product");
+const Setting = require("./models/Setting");
+const Staff = require("./models/Staff");
+const Admin = require("./models/Admin");
+const Category = require("./models/Category");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Connect to MongoDB
+connectDB();
 
 // Middleware
 app.use(cors());
@@ -29,8 +39,8 @@ const upload = multer({ storage: storage });
 // Health check / root route
 app.get("/", (req, res) => {
     res.json({
-        message: "Printo Job Order API is running",
-        version: "1.0.0",
+        message: "Printo Job Order API is running (MongoDB)",
+        version: "2.0.0",
         endpoints: ["/api/clients", "/api/jobs", "/api/products", "/api/settings", "/api/staff"]
     });
 });
@@ -38,546 +48,390 @@ app.get("/", (req, res) => {
 // --- Clients API ---
 
 // Get all clients
-app.get("/api/clients", (req, res) => {
-    const sql = "SELECT * FROM clients ORDER BY name ASC";
-    db.all(sql, [], (err, rows) => {
-        if (err) {
-            res.status(400).json({ error: err.message });
-            return;
-        }
-        res.json({
-            message: "success",
-            data: rows,
-        });
-    });
+app.get("/api/clients", async (req, res) => {
+    try {
+        const clients = await Client.find().sort({ name: 1 });
+        res.json({ message: "success", data: clients });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
 // Create new client
-app.post("/api/clients", (req, res) => {
-    const { name, company, email, phone, address, notes } = req.body;
-    const sql = "INSERT INTO clients (name, company, email, phone, address, notes) VALUES (?,?,?,?,?,?)";
-    const params = [name, company, email, phone, address, notes];
-
-    db.run(sql, params, function (err) {
-        if (err) {
-            res.status(400).json({ error: err.message });
-            return;
-        }
-        res.json({
-            message: "success",
-            data: { id: this.lastID, ...req.body }
-        });
-    });
+app.post("/api/clients", async (req, res) => {
+    try {
+        const client = new Client(req.body);
+        await client.save();
+        res.json({ message: "success", data: client });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
 // Get single client
-app.get("/api/clients/:id", (req, res) => {
-    const sql = "SELECT * FROM clients WHERE id = ?";
-    db.get(sql, [req.params.id], (err, row) => {
-        if (err || !row) {
-            return res.status(400).json({ error: err ? err.message : "Client not found" });
-        }
-        res.json({ message: "success", data: row });
-    });
+app.get("/api/clients/:id", async (req, res) => {
+    try {
+        const client = await Client.findById(req.params.id);
+        if (!client) return res.status(404).json({ error: "Client not found" });
+        res.json({ message: "success", data: client });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
 // Update client
-app.put("/api/clients/:id", (req, res) => {
-    const { name, company, email, phone, address, notes } = req.body;
-    const sql = `UPDATE clients SET 
-        name = ?, company = ?, email = ?, phone = ?, address = ?, notes = ?
-        WHERE id = ?`;
-    const params = [name, company, email, phone, address, notes, req.params.id];
-
-    db.run(sql, params, function (err) {
-        if (err) {
-            res.status(400).json({ error: err.message });
-            return;
-        }
-        res.json({ message: "success", changes: this.changes });
-    });
+app.put("/api/clients/:id", async (req, res) => {
+    try {
+        const client = await Client.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json({ message: "success", data: client });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
 // Delete client
-app.delete("/api/clients/:id", (req, res) => {
-    const sql = "DELETE FROM clients WHERE id = ?";
-    db.run(sql, [req.params.id], function (err) {
-        if (err) {
-            res.status(400).json({ error: err.message });
-            return;
-        }
-        res.json({ message: "success", changes: this.changes });
-    });
+app.delete("/api/clients/:id", async (req, res) => {
+    try {
+        await Client.findByIdAndDelete(req.params.id);
+        res.json({ message: "success" });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
 // --- Jobs API ---
 
 // Get all jobs (optionally filter by client_id)
-app.get("/api/jobs", (req, res) => {
-    let sql = "SELECT * FROM jobs ORDER BY created_at DESC";
-    let params = [];
-
-
-    if (req.query.client_id) {
-        sql = `SELECT 
-            jobs.*,
-            GROUP_CONCAT(DISTINCT job_items.product_type) as product_type,
-            SUM(job_items.quantity) as quantity
-            FROM jobs 
-            LEFT JOIN job_items ON jobs.id = job_items.job_id
-            WHERE jobs.client_id = ?
-            GROUP BY jobs.id
-            ORDER BY jobs.created_at DESC`;
-        params = [req.query.client_id];
-    } else {
-        sql = `SELECT 
-            jobs.*,
-            GROUP_CONCAT(DISTINCT job_items.product_type) as product_type,
-            SUM(job_items.quantity) as quantity
-            FROM jobs 
-            LEFT JOIN job_items ON jobs.id = job_items.job_id
-            GROUP BY jobs.id
-            ORDER BY jobs.created_at DESC`;
-    }
-
-    db.all(sql, params, (err, rows) => {
-        if (err) {
-            res.status(400).json({ error: err.message });
-            return;
+app.get("/api/jobs", async (req, res) => {
+    try {
+        let query = {};
+        if (req.query.client_id) {
+            query.client_id = req.query.client_id;
         }
-        res.json({
-            message: "success",
-            data: rows,
+
+        const jobs = await Job.find(query).sort({ created_at: -1 });
+
+        // Map to flat structure for frontend compatibility (if needed)
+        const flatJobs = jobs.map(job => {
+            const product_types = [...new Set(job.items.map(i => i.product_type))].join(', ');
+            const total_qty = job.items.reduce((sum, i) => sum + (i.quantity || 0), 0);
+            return {
+                ...job._doc,
+                id: job._id,
+                product_type: product_types,
+                quantity: total_qty
+            };
         });
-    });
+
+        res.json({ message: "success", data: flatJobs });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
 // Get single job
-app.get("/api/jobs/:id", (req, res) => {
-    const jobSql = `
-        SELECT jobs.*, clients.company as client_company, clients.address as client_address
-        FROM jobs 
-        LEFT JOIN clients ON jobs.client_id = clients.id
-        WHERE jobs.id = ?`;
-    db.get(jobSql, [req.params.id], (err, job) => {
-        if (err || !job) {
-            return res.status(400).json({ error: err ? err.message : "Job not found" });
-        }
-
-        const itemsSql = "SELECT * FROM job_items WHERE job_id = ?";
-        db.all(itemsSql, [req.params.id], (err, items) => {
-            if (err) return res.status(400).json({ error: err.message });
-            res.json({ message: "success", data: { ...job, items } });
-        });
-    });
+app.get("/api/jobs/:id", async (req, res) => {
+    try {
+        const job = await Job.findById(req.params.id).populate('client_id');
+        if (!job) return res.status(404).json({ error: "Job not found" });
+        res.json({ message: "success", data: { ...job._doc, id: job._id } });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
 // Create new job
-app.post("/api/jobs", upload.any(), (req, res) => {
-    const data = req.body;
-    let items = [];
+app.post("/api/jobs", upload.any(), async (req, res) => {
     try {
-        items = JSON.parse(data.items || '[]');
-    } catch (e) {
-        console.error("Error parsing items JSON:", e);
-    }
+        const data = req.body;
+        let items = [];
+        try {
+            items = JSON.parse(data.items || '[]');
+        } catch (e) {
+            console.error("Error parsing items JSON:", e);
+        }
 
-    // Handle Client (Find or Create)
-    const clientName = data.client_name;
-    const clientPhone = data.client_phone;
-    const clientEmail = data.client_email;
-    const clientCompany = data.client_company || '';
-    const clientAddress = data.client_address || '';
-
-    const findOrCreateClient = () => {
-        return new Promise((resolve, reject) => {
-            if (data.client_id) {
-                return resolve(data.client_id);
-            }
-
-            db.get("SELECT id FROM clients WHERE phone = ? OR name = ?", [clientPhone, clientName], (err, row) => {
-                if (row) {
-                    // Update existing client info if needed
-                    db.run("UPDATE clients SET email = ?, company = ?, address = ? WHERE id = ?", [clientEmail, clientCompany, clientAddress, row.id]);
-                    resolve(row.id);
-                } else {
-                    db.run("INSERT INTO clients (name, phone, email, company, address) VALUES (?, ?, ?, ?, ?)", [clientName, clientPhone, clientEmail, clientCompany, clientAddress], function (err) {
-                        if (err) reject(err); // Reject if there's an error creating client
-                        else resolve(this.lastID);
-                    });
-                }
-            });
-        });
-    };
-
-    findOrCreateClient().then(clientId => {
-        const jobSql = `INSERT INTO jobs (
-            submitted_by, submitted_contact, 
-            client_id, client_name, client_phone, client_email, client_company, client_address,
-            special_instructions, expected_delivery_date, priority, delivery_mode,
-            total_amount, advance_amount, gst_rate, courier_charge
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
-
-        const jobParams = [
-            data.submitted_by,
-            data.submitted_contact,
-            clientId,
-            clientName,
-            clientPhone,
-            clientEmail,
-            clientCompany,
-            clientAddress,
-            data.special_instructions,
-            data.expected_delivery_date,
-            data.priority,
-            data.delivery_mode,
-            data.total_amount || 0,
-            data.advance_amount || 0,
-            data.gst_rate || 0,
-            data.courier_charge || 0
-        ];
-
-        db.run(jobSql, jobParams, function (err) {
-            if (err) return res.status(400).json({ error: err.message });
-
-            const jobId = this.lastID;
-            const jobIdDisplay = `PC-${String(jobId).padStart(4, "0")}`;
-            db.run("UPDATE jobs SET job_id_display = ? WHERE id = ?", [jobIdDisplay, jobId]);
-
-            const itemSql = `INSERT INTO job_items (
-                    job_id, product_type, card_size, quantity, printing_type, printing_mode, finish, accessories, material, variable_data, additional_info, common_front, common_back, rate, advance_amount, binding, corner, paper_thickness, custom_fields
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
-
-            if (items.length === 0) {
-                return res.json({ message: "success", id: jobId, job_id_display: jobIdDisplay });
-            }
-
-            let completed = 0;
-            let hasError = false;
-            items.forEach((item, index) => {
-                db.run(itemSql, [
-                    jobId,
-                    item.product_type,
-                    item.card_size,
-                    item.quantity,
-                    item.printing_type,
-                    item.printing_mode,
-                    item.finish,
-                    item.accessories,
-                    item.material || '',
-                    item.variable_data,
-                    item.additional_info || '',
-                    item.common_front ? 1 : 0,
-                    item.common_back ? 1 : 0,
-                    item.rate || 0,
-                    item.advance_amount || 0,
-                    item.binding || '',
-                    item.corner || '',
-                    item.paper_thickness || '',
-                    item.custom_fields ? (typeof item.custom_fields === 'string' ? item.custom_fields : JSON.stringify(item.custom_fields)) : '{}'
-                ], function (err) {
-                    if (err && !hasError) {
-                        hasError = true;
-                        return res.status(400).json({ error: err.message });
-                    }
-                    completed++;
-                    if (completed === items.length && !hasError) {
-                        res.json({ message: "success", id: jobId, job_id_display: jobIdDisplay });
-                    }
+        // Handle Client Logic
+        let clientId = data.client_id;
+        if (!clientId) {
+            let client = await Client.findOne({ $or: [{ phone: data.client_phone }, { name: data.client_name }] });
+            if (client) {
+                // Update client
+                client.email = data.client_email;
+                client.company = data.client_company;
+                client.address = data.client_address;
+                await client.save();
+                clientId = client._id;
+            } else {
+                client = new Client({
+                    name: data.client_name,
+                    phone: data.client_phone,
+                    email: data.client_email,
+                    company: data.client_company,
+                    address: data.client_address
                 });
-            });
+                await client.save();
+                clientId = client._id;
+            }
+        }
+
+        const newJob = new Job({
+            submitted_by: data.submitted_by,
+            submitted_contact: data.submitted_contact,
+            client_id: clientId,
+            client_name: data.client_name,
+            client_phone: data.client_phone,
+            client_email: data.client_email,
+            client_company: data.client_company,
+            client_address: data.client_address,
+            special_instructions: data.special_instructions,
+            expected_delivery_date: data.expected_delivery_date,
+            priority: data.priority,
+            delivery_mode: data.delivery_mode,
+            total_amount: data.total_amount || 0,
+            advance_amount: data.advance_amount || 0,
+            gst_rate: data.gst_rate || 0,
+            courier_charge: data.courier_charge || 0,
+            items: items.map(item => ({
+                ...item,
+                common_front: item.common_front === '1' || item.common_front === 1 || item.common_front === true,
+                common_back: item.common_back === '1' || item.common_back === 1 || item.common_back === true,
+                custom_fields: typeof item.custom_fields === 'string' ? JSON.parse(item.custom_fields) : item.custom_fields
+            }))
         });
-    }).catch(err => {
+
+        await newJob.save();
+
+        // Generate PC ID
+        // Note: In MongoDB, we use the timestamp/random for now or a counter. 
+        // For simplicity and matching legacy, we can use a counter or just the stringified ID
+        const shortId = newJob._id.toString().slice(-4).toUpperCase();
+        newJob.job_id_display = `PC-${shortId}`;
+        await newJob.save();
+
+        res.json({ message: "success", id: newJob._id, job_id_display: newJob.job_id_display });
+    } catch (err) {
         res.status(400).json({ error: err.message });
-    });
+    }
 });
 
 // Update status
-app.put("/api/jobs/:id/status", (req, res) => {
-    const { status } = req.body;
-    db.run("UPDATE jobs SET status = ? WHERE id = ?", [status, req.params.id], function (err) {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", changes: this.changes });
-    });
+app.put("/api/jobs/:id/status", async (req, res) => {
+    try {
+        await Job.findByIdAndUpdate(req.params.id, { status: req.body.status });
+        res.json({ message: "success" });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
 // Update Job Details
-app.put("/api/jobs/:id", upload.any(), (req, res) => {
-    const data = req.body;
-    let items = [];
+app.put("/api/jobs/:id", upload.any(), async (req, res) => {
     try {
-        items = JSON.parse(data.items || '[]');
-    } catch (e) {
-        console.error("Error parsing items:", e);
-    }
-    const files = req.files || [];
-    const jobId = req.params.id;
+        const data = req.body;
+        let items = [];
+        try {
+            items = JSON.parse(data.items || '[]');
+        } catch (e) {
+            console.error("Error parsing items:", e);
+        }
 
-    // Handle Client (Find or Create)
-    const clientName = data.client_name;
-    const clientPhone = data.client_phone;
-    const clientEmail = data.client_email;
-    const clientCompany = data.client_company || '';
-    const clientAddress = data.client_address || '';
+        const updatedJob = await Job.findByIdAndUpdate(req.params.id, {
+            ...data,
+            items: items.map(item => ({
+                ...item,
+                common_front: item.common_front === '1' || item.common_front === 1 || item.common_front === true,
+                common_back: item.common_back === '1' || item.common_back === 1 || item.common_back === true,
+                custom_fields: typeof item.custom_fields === 'string' ? JSON.parse(item.custom_fields) : item.custom_fields
+            }))
+        }, { new: true });
 
-    const findOrCreateClient = () => {
-        return new Promise((resolve, reject) => {
-            if (data.client_id) {
-                return resolve(data.client_id);
-            }
-            db.get("SELECT id FROM clients WHERE phone = ? OR name = ?", [clientPhone, clientName], (err, row) => {
-                if (row) {
-                    db.run("UPDATE clients SET email = ?, company = ?, address = ? WHERE id = ?", [clientEmail, clientCompany, clientAddress, row.id]);
-                    resolve(row.id);
-                } else {
-                    db.run("INSERT INTO clients (name, phone, email, company, address) VALUES (?, ?, ?, ?, ?)", [clientName, clientPhone, clientEmail, clientCompany, clientAddress], function (err) {
-                        if (err) reject(err);
-                        else resolve(this.lastID);
-                    });
-                }
-            });
-        });
-    };
-
-    findOrCreateClient().then(clientId => {
-        const jobSql = `UPDATE jobs SET 
-            submitted_by = ?, submitted_contact = ?, 
-            client_id = ?, client_name = ?, client_phone = ?, client_email = ?, client_company = ?, client_address = ?,
-            special_instructions = ?, expected_delivery_date = ?, priority = ?, delivery_mode = ?,
-            total_amount = ?, advance_amount = ?, gst_rate = ?, courier_charge = ?
-            WHERE id = ?`;
-
-        const jobParams = [
-            data.submitted_by,
-            data.submitted_contact,
-            clientId,
-            clientName,
-            clientPhone,
-            clientEmail,
-            clientCompany,
-            clientAddress,
-            data.special_instructions,
-            data.expected_delivery_date,
-            data.priority,
-            data.delivery_mode,
-            data.total_amount || 0,
-            data.advance_amount || 0,
-            data.gst_rate || 0,
-            data.courier_charge || 0,
-            jobId
-        ];
-
-        db.run(jobSql, jobParams, function (err) {
-            if (err) return res.status(400).json({ error: err.message });
-
-            // Delete old items
-            db.run("DELETE FROM job_items WHERE job_id = ?", [jobId], (err) => {
-                if (err) return res.status(400).json({ error: err.message });
-
-                // Insert new items
-                const itemSql = `INSERT INTO job_items (
-                    job_id, product_type, card_size, quantity, printing_type, printing_mode, finish, accessories, material, variable_data, additional_info, common_front, common_back, rate, advance_amount, binding, corner, paper_thickness, custom_fields
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
-
-                if (items.length === 0) {
-                    return res.json({ message: "success" });
-                }
-
-                let completed = 0;
-                let hasError = false;
-
-                items.forEach((item, index) => {
-
-                    db.run(itemSql, [
-                        jobId,
-                        item.product_type,
-                        item.card_size,
-                        item.quantity,
-                        item.printing_type,
-                        item.printing_mode,
-                        item.finish,
-                        item.accessories,
-                        item.material || '',
-                        item.variable_data,
-                        item.additional_info || '',
-                        item.common_front ? 1 : 0,
-                        item.common_back ? 1 : 0,
-                        item.rate || 0,
-                        item.advance_amount || 0,
-                        item.binding || '',
-                        item.corner || '',
-                        item.paper_thickness || '',
-                        item.custom_fields ? (typeof item.custom_fields === 'string' ? item.custom_fields : JSON.stringify(item.custom_fields)) : '{}'
-                    ], function (err) {
-                        if (err && !hasError) {
-                            hasError = true;
-                            return res.status(400).json({ error: err.message });
-                        }
-                        completed++;
-                        if (completed === items.length && !hasError) {
-                            res.json({ message: "success" });
-                        }
-                    });
-                });
-            });
-        });
-    }).catch(err => {
+        res.json({ message: "success", data: updatedJob });
+    } catch (err) {
         res.status(400).json({ error: err.message });
-    });
+    }
 });
 
 // Delete Job
-app.delete("/api/jobs/:id", (req, res) => {
-    const sql = "DELETE FROM jobs WHERE id = ?";
-    db.run(sql, req.params.id, function (err) {
-        if (err) {
-            res.status(400).json({ error: err.message });
-            return;
-        }
-        res.json({ message: "success", changes: this.changes });
-    });
+app.delete("/api/jobs/:id", async (req, res) => {
+    try {
+        await Job.findByIdAndDelete(req.params.id);
+        res.json({ message: "success" });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
-// --- Admin API (Products & Settings) ---
+// --- Admin API ---
 
 // Products
-app.get("/api/products", (req, res) => {
-    db.all("SELECT * FROM products ORDER BY name", [], (err, rows) => {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", data: rows });
-    });
+app.get("/api/products", async (req, res) => {
+    try {
+        const products = await Product.find().sort({ name: 1 });
+        res.json({ message: "success", data: products });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
-app.post("/api/products", (req, res) => {
-    db.run("INSERT INTO products (name) VALUES (?)", [req.body.name], function (err) {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", data: { id: this.lastID, name: req.body.name } });
-    });
+app.post("/api/products", async (req, res) => {
+    try {
+        const product = new Product(req.body);
+        await product.save();
+        res.json({ message: "success", data: product });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
-app.delete("/api/products/:id", (req, res) => {
-    db.run("DELETE FROM products WHERE id = ?", [req.params.id], function (err) {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", changes: this.changes });
-    });
+app.delete("/api/products/:id", async (req, res) => {
+    try {
+        await Product.findByIdAndDelete(req.params.id);
+        res.json({ message: "success" });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
-app.put("/api/products/:id", (req, res) => {
-    db.run("UPDATE products SET name = ? WHERE id = ?", [req.body.name, req.params.id], function (err) {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", changes: this.changes });
-    });
+app.put("/api/products/:id", async (req, res) => {
+    try {
+        const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json({ message: "success", data: product });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
-// Settings (Customizations)
-app.get("/api/settings", (req, res) => {
-    db.all("SELECT * FROM settings ORDER BY category, value", [], (err, rows) => {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", data: rows });
-    });
+// Settings
+app.get("/api/settings", async (req, res) => {
+    try {
+        const settings = await Setting.find().sort({ category: 1, value: 1 });
+        res.json({ message: "success", data: settings });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
-app.post("/api/settings", (req, res) => {
-    const { category, value, product_id } = req.body;
-    db.run("INSERT INTO settings (category, value, product_id) VALUES (?,?,?)", [category, value, product_id || null], function (err) {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", data: { id: this.lastID, category, value, product_id } });
-    });
+app.post("/api/settings", async (req, res) => {
+    try {
+        const setting = new Setting(req.body);
+        await setting.save();
+        res.json({ message: "success", data: setting });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
-app.delete("/api/settings/:id", (req, res) => {
-    db.run("DELETE FROM settings WHERE id = ?", [req.params.id], function (err) {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", changes: this.changes });
-    });
+app.delete("/api/settings/:id", async (req, res) => {
+    try {
+        await Setting.findByIdAndDelete(req.params.id);
+        res.json({ message: "success" });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
-app.put("/api/settings/:id", (req, res) => {
-    const { category, value, product_id } = req.body;
-    db.run("UPDATE settings SET category = ?, value = ?, product_id = ? WHERE id = ?",
-        [category, value, product_id || null, req.params.id], function (err) {
-            if (err) return res.status(400).json({ error: err.message });
-            res.json({ message: "success", changes: this.changes });
-        });
+app.put("/api/settings/:id", async (req, res) => {
+    try {
+        const setting = await Setting.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json({ message: "success", data: setting });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
-// --- Staff API ---
-app.get("/api/staff", (req, res) => {
-    db.all("SELECT * FROM staff ORDER BY name ASC", [], (err, rows) => {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", data: rows });
-    });
+// Staff
+app.get("/api/staff", async (req, res) => {
+    try {
+        const staff = await Staff.find().sort({ name: 1 });
+        res.json({ message: "success", data: staff });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
-app.post("/api/staff", (req, res) => {
-    const { name, phone, email, department } = req.body;
-    db.run("INSERT INTO staff (name, phone, email, department) VALUES (?,?,?,?)", [name, phone, email, department], function (err) {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", data: { id: this.lastID, ...req.body } });
-    });
+app.post("/api/staff", async (req, res) => {
+    try {
+        const staff = new Staff(req.body);
+        await staff.save();
+        res.json({ message: "success", data: staff });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
-app.delete("/api/staff/:id", (req, res) => {
-    db.run("DELETE FROM staff WHERE id = ?", [req.params.id], function (err) {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", changes: this.changes });
-    });
+app.delete("/api/staff/:id", async (req, res) => {
+    try {
+        await Staff.findByIdAndDelete(req.params.id);
+        res.json({ message: "success" });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
-app.put("/api/staff/:id", (req, res) => {
-    const { name, phone, email, department } = req.body;
-    db.run("UPDATE staff SET name = ?, phone = ?, email = ?, department = ? WHERE id = ?",
-        [name, phone, email, department, req.params.id], function (err) {
-            if (err) return res.status(400).json({ error: err.message });
-            res.json({ message: "success", changes: this.changes });
-        });
+app.put("/api/staff/:id", async (req, res) => {
+    try {
+        const staff = await Staff.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json({ message: "success", data: staff });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
-// --- Admin Auth API ---
-app.post("/api/admin/login", (req, res) => {
-    const { username, password } = req.body;
-    db.get("SELECT * FROM admins WHERE username = ? AND password = ?", [username, password], (err, row) => {
-        if (err) return res.status(400).json({ error: err.message });
-        if (row) {
-            res.json({ message: "success", data: { id: row.id, username: row.username } });
+// Categories
+app.get("/api/categories", async (req, res) => {
+    try {
+        const categories = await Category.find().sort({ display_name: 1 });
+        res.json({ message: "success", data: categories });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.post("/api/categories", async (req, res) => {
+    try {
+        const category = new Category(req.body);
+        await category.save();
+        res.json({ message: "success", data: category });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.delete("/api/categories/:id", async (req, res) => {
+    try {
+        await Category.findByIdAndDelete(req.params.id);
+        res.json({ message: "success" });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.put("/api/categories/:id", async (req, res) => {
+    try {
+        const category = await Category.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json({ message: "success", data: category });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// Admin Login
+app.post("/api/admin/login", async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const admin = await Admin.findOne({ username, password });
+        if (admin) {
+            res.json({ message: "success", data: { id: admin._id, username: admin.username } });
         } else {
             res.status(401).json({ error: "Invalid credentials" });
         }
-    });
-});
-
-// --- Custom Categories API ---
-app.get("/api/categories", (req, res) => {
-    db.all("SELECT * FROM custom_categories ORDER BY display_name", [], (err, rows) => {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", data: rows });
-    });
-});
-
-app.post("/api/categories", (req, res) => {
-    const { name, display_name } = req.body;
-    db.run("INSERT INTO custom_categories (name, display_name) VALUES (?, ?)", [name, display_name], function (err) {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", data: { id: this.lastID, name, display_name } });
-    });
-});
-
-app.delete("/api/categories/:id", (req, res) => {
-    db.run("DELETE FROM custom_categories WHERE id = ?", [req.params.id], function (err) {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", changes: this.changes });
-    });
-});
-
-app.put("/api/categories/:id", (req, res) => {
-    const { display_name } = req.body;
-    db.run("UPDATE custom_categories SET display_name = ? WHERE id = ?", [display_name, req.params.id], function (err) {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ message: "success", changes: this.changes });
-    });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on http://localhost:${PORT} (MongoDB)`);
 });
