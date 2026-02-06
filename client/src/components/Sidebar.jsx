@@ -9,8 +9,8 @@ const Sidebar = ({ isOpen, onClose }) => {
 
     return (
         <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
-            <div className="sidebar-brand" style={{ gap: '12px', display: 'flex', alignItems: 'center' }}>
-                <img src={logo} alt="Printo Logo" style={{ width: '35px', height: '35px', objectFit: 'contain' }} />
+            <div className="sidebar-brand" style={{ gap: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <img src={logo} alt="Printo Logo" style={{ width: '200px', height: '200px', objectFit: 'contain' }} />
                 <span>Job Order</span>
             </div>
 

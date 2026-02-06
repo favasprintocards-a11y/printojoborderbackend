@@ -19,8 +19,15 @@ This application currently uses **SQLite** (a file-based database) and local fil
 ---
 
 ## Step 1: Push Code to GitHub
-1. Create a new repository on GitHub.
-2. Push this entire project folder to the repository.
+1. Create a new empty repository on GitHub (do NOT add README, .gitignore, or license).
+2. Open a terminal in this project folder.
+3. Run the following commands (replace `<YOUR_REPO_URL>` with the URL from GitHub):
+   ```bash
+   git remote add origin <YOUR_REPO_URL>
+   git branch -M main
+   git push -u origin main
+   ```
+   *(Note: Git has been installed and the repository initialized for you. You just need to connect it to GitHub.)*
 
 ## Step 2: Deploy Backend to Render
 1. Create an account on [Render.com](https://render.com).
