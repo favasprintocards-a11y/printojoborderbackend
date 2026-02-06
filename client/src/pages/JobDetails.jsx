@@ -94,15 +94,6 @@ const JobDetails = () => {
 
     return (
         <div className="container animate-fade-in">
-            {/* Print-only header */}
-            <div className="print-only" style={{ display: 'none', textAlign: 'center', marginBottom: '30px', borderBottom: '2px solid #000', paddingBottom: '15px' }}>
-                <h1 style={{ margin: 0, fontSize: '28pt', fontWeight: '700', color: '#000' }}>PRINTO JOB ORDER</h1>
-                <p style={{ margin: '5px 0', fontSize: '12pt', fontWeight: '700' }}>Production Slip & Feedback Form</p>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '10pt', marginTop: '5px' }}>
-                    <span>Order Date: {formatDate(job.created_at, true)}</span>
-                    <span>Job ID: {job.job_id_display || `#${job.id}`}</span>
-                </div>
-            </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <Link to="/" className="btn btn-outline">
@@ -280,32 +271,6 @@ const JobDetails = () => {
                 </div>
             </div>
 
-            {/* Print Footer Section */}
-            <div className="print-only" style={{ display: 'none', marginTop: '40px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '40px' }}>
-                    <div style={{ flex: 1 }}>
-                        <h4 style={{ borderBottom: '1px solid #000', paddingBottom: '5px', marginBottom: '10px' }}>Terms & Conditions</h4>
-                        <ul style={{ fontSize: '9pt', paddingLeft: '20px', margin: 0 }}>
-                            <li>Colors may vary slightly from screen to print.</li>
-                            <li>Check all spelling and details before approval.</li>
-                            <li>No returns or refunds after production starts.</li>
-                        </ul>
-                    </div>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: '50px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <div style={{ textAlign: 'center', borderTop: '1px solid #000', width: '150px', paddingTop: '5px' }}>
-                                <div style={{ fontSize: '10pt', fontWeight: '700' }}>Staff Signature</div>
-                            </div>
-                            <div style={{ textAlign: 'center', borderTop: '1px solid #000', width: '150px', paddingTop: '5px' }}>
-                                <div style={{ fontSize: '10pt', fontWeight: '700' }}>Customer Signature</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div style={{ textAlign: 'center', marginTop: '30px', fontSize: '8pt', color: '#666', fontStyle: 'italic' }}>
-                    This is a computer-generated document. No seal required.
-                </div>
-            </div>
         </div>
     );
 };

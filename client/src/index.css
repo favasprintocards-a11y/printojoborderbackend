@@ -399,60 +399,76 @@ tr:hover {
 }
 
 @media print {
+  body {
+    background-color: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    font-size: 11pt;
+  }
 
   .header,
   .btn,
   .nav-links,
   .form-control,
   .no-print,
+  .sidebar,
   select {
     display: none !important;
   }
 
+  /* Force background colors and borders to appear in PDF */
   .card {
-    border: 1px solid #ddd !important;
-    box-shadow: none;
-    padding: 15px !important;
-    margin-bottom: 15px !important;
+    border: 1px solid var(--border) !important;
+    background-color: var(--bg-surface) !important;
+    box-shadow: none !important;
+    padding: 20px !important;
+    margin-bottom: 20px !important;
     page-break-inside: avoid;
+    border-radius: var(--radius) !important;
+  }
+
+  /* Specific card accents */
+  [style*="borderTop: 4px solid var(--primary)"] {
+    border-top: 4px solid var(--primary) !important;
+  }
+
+  [style*="borderLeft: 4px solid var(--info)"] {
+    border-left: 4px solid var(--info) !important;
   }
 
   .container {
-    max-width: 100%;
-    padding: 10px;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
-  body {
-    background-color: white;
-    font-size: 12pt;
-  }
-
-  h1 {
-    font-size: 18pt;
-    margin-bottom: 10px;
-  }
-
+  h1,
+  h2,
   h3 {
-    font-size: 14pt;
-    margin-bottom: 8px;
+    color: var(--primary) !important;
   }
 
   table {
-    page-break-inside: auto;
+    width: 100% !important;
+    border-collapse: collapse !important;
   }
 
+  th {
+    background-color: #f8f9fa !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Ensure rows don't break across pages */
   tr {
     page-break-inside: avoid;
-    page-break-after: auto;
   }
 
-  /* Show status badge but hide the dropdown */
   .badge {
     display: inline-block !important;
-  }
-
-  /* Show print-only elements */
-  .print-only {
-    display: block !important;
+    border: 1px solid #ddd !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }
