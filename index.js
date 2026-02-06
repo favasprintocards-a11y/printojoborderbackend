@@ -51,7 +51,8 @@ app.get("/", (req, res) => {
 app.get("/api/clients", async (req, res) => {
     try {
         const clients = await Client.find().sort({ name: 1 });
-        res.json({ message: "success", data: clients });
+        const mappedClients = clients.map(c => ({ ...c._doc, id: c._id }));
+        res.json({ message: "success", data: mappedClients });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -62,7 +63,7 @@ app.post("/api/clients", async (req, res) => {
     try {
         const client = new Client(req.body);
         await client.save();
-        res.json({ message: "success", data: client });
+        res.json({ message: "success", data: { ...client._doc, id: client._id } });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -268,7 +269,8 @@ app.delete("/api/jobs/:id", async (req, res) => {
 app.get("/api/products", async (req, res) => {
     try {
         const products = await Product.find().sort({ name: 1 });
-        res.json({ message: "success", data: products });
+        const mapped = products.map(p => ({ ...p._doc, id: p._id }));
+        res.json({ message: "success", data: mapped });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -278,7 +280,7 @@ app.post("/api/products", async (req, res) => {
     try {
         const product = new Product(req.body);
         await product.save();
-        res.json({ message: "success", data: product });
+        res.json({ message: "success", data: { ...product._doc, id: product._id } });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -296,7 +298,7 @@ app.delete("/api/products/:id", async (req, res) => {
 app.put("/api/products/:id", async (req, res) => {
     try {
         const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json({ message: "success", data: product });
+        res.json({ message: "success", data: { ...product._doc, id: product._id } });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -306,7 +308,8 @@ app.put("/api/products/:id", async (req, res) => {
 app.get("/api/settings", async (req, res) => {
     try {
         const settings = await Setting.find().sort({ category: 1, value: 1 });
-        res.json({ message: "success", data: settings });
+        const mapped = settings.map(s => ({ ...s._doc, id: s._id }));
+        res.json({ message: "success", data: mapped });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -316,7 +319,7 @@ app.post("/api/settings", async (req, res) => {
     try {
         const setting = new Setting(req.body);
         await setting.save();
-        res.json({ message: "success", data: setting });
+        res.json({ message: "success", data: { ...setting._doc, id: setting._id } });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -334,7 +337,7 @@ app.delete("/api/settings/:id", async (req, res) => {
 app.put("/api/settings/:id", async (req, res) => {
     try {
         const setting = await Setting.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json({ message: "success", data: setting });
+        res.json({ message: "success", data: { ...setting._doc, id: setting._id } });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -344,7 +347,8 @@ app.put("/api/settings/:id", async (req, res) => {
 app.get("/api/staff", async (req, res) => {
     try {
         const staff = await Staff.find().sort({ name: 1 });
-        res.json({ message: "success", data: staff });
+        const mapped = staff.map(s => ({ ...s._doc, id: s._id }));
+        res.json({ message: "success", data: mapped });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -354,7 +358,7 @@ app.post("/api/staff", async (req, res) => {
     try {
         const staff = new Staff(req.body);
         await staff.save();
-        res.json({ message: "success", data: staff });
+        res.json({ message: "success", data: { ...staff._doc, id: staff._id } });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -372,7 +376,7 @@ app.delete("/api/staff/:id", async (req, res) => {
 app.put("/api/staff/:id", async (req, res) => {
     try {
         const staff = await Staff.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json({ message: "success", data: staff });
+        res.json({ message: "success", data: { ...staff._doc, id: staff._id } });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -382,7 +386,8 @@ app.put("/api/staff/:id", async (req, res) => {
 app.get("/api/categories", async (req, res) => {
     try {
         const categories = await Category.find().sort({ display_name: 1 });
-        res.json({ message: "success", data: categories });
+        const mapped = categories.map(c => ({ ...c._doc, id: c._id }));
+        res.json({ message: "success", data: mapped });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -392,7 +397,7 @@ app.post("/api/categories", async (req, res) => {
     try {
         const category = new Category(req.body);
         await category.save();
-        res.json({ message: "success", data: category });
+        res.json({ message: "success", data: { ...category._doc, id: category._id } });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -410,7 +415,7 @@ app.delete("/api/categories/:id", async (req, res) => {
 app.put("/api/categories/:id", async (req, res) => {
     try {
         const category = await Category.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json({ message: "success", data: category });
+        res.json({ message: "success", data: { ...category._doc, id: category._id } });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
