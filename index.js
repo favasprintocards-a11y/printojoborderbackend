@@ -432,6 +432,20 @@ app.post("/api/admin/login", async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const seedAdmin = async () => {
+    try {
+        const count = await Admin.countDocuments();
+        if (count === 0) {
+            const admin = new Admin({ username: 'admin', password: 'admin123' });
+            await admin.save();
+            console.log("Default admin created: admin / admin123");
+        }
+    } catch (err) {
+        console.error("Error seeding admin:", err);
+    }
+};
+
+app.listen(PORT, async () => {
     console.log(`Server running on http://localhost:${PORT} (MongoDB)`);
+    await seedAdmin();
 });
