@@ -484,7 +484,7 @@ const Admin = () => {
                                     className="form-control"
                                     style={{ width: 'auto' }}
                                     value={newSetting.product_id}
-                                    onChange={(e) => setNewSetting({ ...newSetting, product_id: e.target.value ? parseInt(e.target.value) : '' })}
+                                    onChange={(e) => setNewSetting({ ...newSetting, product_id: e.target.value || '' })}
                                 >
                                     <option value="">Apply to All</option>
                                     {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -550,7 +550,7 @@ const Admin = () => {
                                                                     className="form-control"
                                                                     style={{ height: '30px', fontSize: '0.85rem', width: '100px' }}
                                                                     value={editSettingData.product_id}
-                                                                    onChange={e => setEditSettingData({ ...editSettingData, product_id: e.target.value ? parseInt(e.target.value) : '' })}
+                                                                    onChange={e => setEditSettingData({ ...editSettingData, product_id: e.target.value || '' })}
                                                                 >
                                                                     <option value="">Universal</option>
                                                                     {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}

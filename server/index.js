@@ -51,7 +51,11 @@ app.get("/", (req, res) => {
 app.get("/api/clients", async (req, res) => {
     try {
         const clients = await Client.find().sort({ name: 1 });
-        const mappedClients = clients.map(c => ({ ...c._doc, id: c._id }));
+        const mappedClients = clients.map(c => {
+            const obj = c.toObject();
+            obj.id = obj._id;
+            return obj;
+        });
         res.json({ message: "success", data: mappedClients });
     } catch (err) {
         res.status(400).json({ error: err.message });
@@ -269,7 +273,11 @@ app.delete("/api/jobs/:id", async (req, res) => {
 app.get("/api/products", async (req, res) => {
     try {
         const products = await Product.find().sort({ name: 1 });
-        const mapped = products.map(p => ({ ...p._doc, id: p._id }));
+        const mapped = products.map(p => {
+            const obj = p.toObject();
+            obj.id = obj._id;
+            return obj;
+        });
         res.json({ message: "success", data: mapped });
     } catch (err) {
         res.status(400).json({ error: err.message });
@@ -308,7 +316,11 @@ app.put("/api/products/:id", async (req, res) => {
 app.get("/api/settings", async (req, res) => {
     try {
         const settings = await Setting.find().sort({ category: 1, value: 1 });
-        const mapped = settings.map(s => ({ ...s._doc, id: s._id }));
+        const mapped = settings.map(s => {
+            const obj = s.toObject();
+            obj.id = obj._id;
+            return obj;
+        });
         res.json({ message: "success", data: mapped });
     } catch (err) {
         res.status(400).json({ error: err.message });
@@ -347,7 +359,11 @@ app.put("/api/settings/:id", async (req, res) => {
 app.get("/api/staff", async (req, res) => {
     try {
         const staff = await Staff.find().sort({ name: 1 });
-        const mapped = staff.map(s => ({ ...s._doc, id: s._id }));
+        const mapped = staff.map(s => {
+            const obj = s.toObject();
+            obj.id = obj._id;
+            return obj;
+        });
         res.json({ message: "success", data: mapped });
     } catch (err) {
         res.status(400).json({ error: err.message });
@@ -386,7 +402,11 @@ app.put("/api/staff/:id", async (req, res) => {
 app.get("/api/categories", async (req, res) => {
     try {
         const categories = await Category.find().sort({ display_name: 1 });
-        const mapped = categories.map(c => ({ ...c._doc, id: c._id }));
+        const mapped = categories.map(c => {
+            const obj = c.toObject();
+            obj.id = obj._id;
+            return obj;
+        });
         res.json({ message: "success", data: mapped });
     } catch (err) {
         res.status(400).json({ error: err.message });
